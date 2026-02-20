@@ -12,6 +12,19 @@ ez::tracking_wheel horiz_tracker(
   2.75, // Wheel Diameter
   4.0); // Distance to center of robot
 
+bool drive_arcade = false;
+
+void drive_mode_task() {
+  while (true) {
+    if (master.get_digital_new_press(DIGITAL_UP)) {
+      drive_arcade = !drive_arcade;
+      master.set_text(0, 0, drive_arcade ? "Drive: Arcade" : "Drive: Tank");
+      master.rumble(drive_arcade ? "." : "..");
+    }
+    pros::delay(ez::util::DELAY_TIME);
+  }
+}
+
 void initialize() {
   ez::ez_template_print();
 
@@ -47,6 +60,9 @@ void initialize() {
   chassis.initialize();
   ez::as::initialize();
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
+
+  pros::Task driveModeTask(drive_mode_task);
+  master.set_text(0, 0, drive_arcade ? "Drive: Arcade" : "Drive: Tank");
 }
 
 
@@ -136,8 +152,10 @@ void opcontrol() {
   while (true) {
     ez_template_extras();
 
-    chassis.opcontrol_tank();  // Tank control
-    // chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
+    if (drive_arcade)
+      chassis.opcontrol_arcade_standard(ez::SPLIT);
+    else
+      chassis.opcontrol_tank();
 
     pros::delay(ez::util::DELAY_TIME);
   }
