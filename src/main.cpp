@@ -3,21 +3,21 @@
 #include "robot.hpp"
 
 ez::Drive chassis(
-    {1, 2, 3},     // Left motors
-    {-4, -5, -6},  // Right motors (negative for reversed)
-    7,             // IMU port
+    {-6, 8, -5},     // Left motors
+    {9, -10, 7},  // Right motors (negative for reversed)
+    21,             // IMU port
     2.75,
     600);
 
 ez::tracking_wheel horiz_tracker(
-    8,     // Port
+    1,     // Port
     2,     // Wheel Diameter
     4.0);  // Distance to center of robot
 
 Robot robot(
-    9,    // firstStagePort
-    10,   // leverPort
-    11,   // rotationPort
+    2,    // firstStagePort
+    20,   // leverPort
+    15,   // rotationPort
     'A',  // blockerPort
     'B',  // liftPort
     'C',  // matchloaderPort
