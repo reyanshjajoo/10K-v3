@@ -61,7 +61,7 @@ class Robot {
   bool wing_up = false;         // defaults DOWN (and forced DOWN when lift is lowered)
 
   // ===== Lever constants (easy tuning) =====
-  // Speeds (cap PID output)
+  // Speeds
   const int lever_full_speed = 127;  // max
   const int lever_slow_speed = 63;   // half max
 
@@ -81,11 +81,11 @@ class Robot {
   const bool blocker_open_value = true;
   const bool blocker_closed_value = false;
 
+  // Lever settling window
+  const double lever_settle_window_deg = 5.0;
+
   // Active speed cap chosen at the moment score() is requested
   int active_lever_speed = 127;
-
-  // EZ PID (tune these later)
-  ez::PID leverPID{1.2, 0.0, 6.0, 0.0, "Lever"};
 
   // Score task state machine
   enum class ScoreState {
@@ -107,7 +107,5 @@ class Robot {
   pros::Task scoreTask;
 
   // Helpers
-  double lever_deg() const;    // rotation -> degrees
-  void move_lever(int power);  // clamp and send
-  void enforceWingRule();      // force wing down if lift is lowered
+  void enforceWingRule();  // force wing down if lift is lowered
 };

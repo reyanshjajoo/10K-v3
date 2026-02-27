@@ -3,9 +3,9 @@
 #include "robot.hpp"
 
 ez::Drive chassis(
-    {-6, 8, -5},     // Left motors
+    {-6, 8, -5},  // Left motors
     {9, -10, 7},  // Right motors (negative for reversed)
-    21,             // IMU port
+    21,           // IMU port
     2.75,
     600);
 
@@ -25,6 +25,7 @@ Robot robot(
 );
 
 bool drive_arcade = false;
+bool was_outtaking = false;
 
 void drive_mode_task() {
   while (true) {
@@ -72,7 +73,7 @@ void initialize() {
   chassis.initialize();
   ez::as::initialize();
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
-  
+
   robot.init();
 
   pros::Task driveModeTask(drive_mode_task);
@@ -177,8 +178,13 @@ void opcontrol() {
       robot.toggleIntake();
 
     // Reverse intake
-    if (master.get_digital(DIGITAL_L2))
+    if (master.get_digital(DIGITAL_L2)) {
       robot.reverseIntake();
+      was_outtaking = true;
+    } else if (was_outtaking) {
+      robot.intakeOff();  // stop when L2 is released
+      was_outtaking = false;
+    }
 
     // Score
     if (master.get_digital_new_press(DIGITAL_R2))

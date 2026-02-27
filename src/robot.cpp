@@ -1,13 +1,6 @@
-// ===================== robot.cpp =====================
 #include "robot.hpp"
 
 #include <cmath>
-
-static inline int clamp127(int v) {
-  if (v > 127) return 127;
-  if (v < -127) return -127;
-  return v;
-}
 
 Robot::Robot(int firstStagePort,
              int leverPort,
@@ -37,19 +30,6 @@ Robot::Robot(int firstStagePort,
   wing.set_value(piston_down_value);
   matchloader_up = false;
   wing_up = false;
-
-  // PID exit conditions (tune later)
-  // Format: (small_time, small_error, big_time, big_error, vel_time, current_time)
-  leverPID.exit_condition_set(120, 2.0, 350, 6.0, 250, 400);
-}
-
-double Robot::lever_deg() const {
-  // PROS Rotation returns centidegrees
-  return static_cast<double>(lever_rotation.get_position()) / 100.0;
-}
-
-void Robot::move_lever(int power) {
-  lever.move(clamp127(power));
 }
 
 void Robot::enforceWingRule() {
@@ -61,8 +41,7 @@ void Robot::enforceWingRule() {
 }
 
 void Robot::init() {
-  // Default piston states
-  // both pistons default down (per your latest requirement)
+  // Default piston states (defaults up)
   lift.set_value(piston_up_value);
   lift_up = true;
 
@@ -77,12 +56,15 @@ void Robot::init() {
   // Make sure wing rule is enforced when lift is lowered
   enforceWingRule();
 
+  lever.tare_position();
+
   // Safety: stop motors at init
   first_stage.move(0);
   lever.move(0);
   intake_running = false;
 
   lever_rotation.reset_position();
+  lever.set_brake_mode(MOTOR_BRAKE_HOLD);
 }
 
 // -------- First stage --------
@@ -193,11 +175,9 @@ void Robot::score_task_trampoline(void* param) {
 
 void Robot::score_task() {
   while (true) {
-    // Start sequence if requested and idle
     if (score_requested && score_state == ScoreState::IDLE) {
       score_requested = false;
 
-      // Open blocker immediately, then wait before moving lever
       blocker.set_value(blocker_open_value);
       state_start_ms = pros::millis();
       score_state = ScoreState::OPEN_BLOCKER_DELAY;
@@ -205,66 +185,41 @@ void Robot::score_task() {
 
     switch (score_state) {
       case ScoreState::IDLE:
-        // do nothing
         break;
 
       case ScoreState::OPEN_BLOCKER_DELAY:
         if (pros::millis() - state_start_ms >= blocker_open_delay_ms) {
-          leverPID.timers_reset();
-          leverPID.target_set(lever_score_position);
+          lever.move_absolute(
+              lever_score_position,
+              active_lever_speed);
+
           score_state = ScoreState::MOVE_TO_SCORE;
         }
         break;
 
-      case ScoreState::MOVE_TO_SCORE: {
-        const double pos = lever_deg();
-        int power = static_cast<int>(std::lround(leverPID.compute(pos)));
-
-        // Cap by selected speed
-        power = clamp127(power);
-        if (power > active_lever_speed) power = active_lever_speed;
-        if (power < -active_lever_speed) power = -active_lever_speed;
-
-        move_lever(power);
-
-        // If PID says we're done, stop and hold
-        if (leverPID.exit_condition(false) != ez::RUNNING) {
-          move_lever(0);
+      case ScoreState::MOVE_TO_SCORE:
+        if (std::abs(lever.get_position() - lever_score_position) < lever_settle_window_deg) {
           state_start_ms = pros::millis();
           score_state = ScoreState::HOLD_SCORE;
         }
         break;
-      }
 
       case ScoreState::HOLD_SCORE:
-        move_lever(0);
         if (pros::millis() - state_start_ms >= lever_hold_ms) {
-          leverPID.timers_reset();
-          leverPID.target_set(lever_home_position);
+          lever.move_absolute(
+              lever_home_position,
+              active_lever_speed);
+
           score_state = ScoreState::MOVE_TO_HOME;
         }
         break;
 
-      case ScoreState::MOVE_TO_HOME: {
-        const double pos = lever_deg();
-        int power = static_cast<int>(std::lround(leverPID.compute(pos)));
-
-        power = clamp127(power);
-        if (power > active_lever_speed) power = active_lever_speed;
-        if (power < -active_lever_speed) power = -active_lever_speed;
-
-        move_lever(power);
-
-        if (leverPID.exit_condition(false) != ez::RUNNING) {
-          move_lever(0);
-
-          // Close blocker AFTER lever is back home
+      case ScoreState::MOVE_TO_HOME:
+        if (std::abs(lever.get_position() - lever_home_position) < lever_settle_window_deg) {
           blocker.set_value(blocker_closed_value);
-
           score_state = ScoreState::IDLE;
         }
         break;
-      }
     }
 
     pros::delay(ez::util::DELAY_TIME);
