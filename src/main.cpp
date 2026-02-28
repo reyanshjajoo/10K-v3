@@ -18,10 +18,10 @@ Robot robot(
     2,    // firstStagePort
     20,   // leverPort
     15,   // rotationPort
-    'A',  // blockerPort
-    'B',  // liftPort
-    'C',  // matchloaderPort
-    'D'   // wingPort
+    'D',  // blockerPort
+    'G',  // liftPort
+    'H',  // matchloaderPort
+    'C'   // wingPort
 );
 
 bool drive_arcade = false;
@@ -38,6 +38,8 @@ void drive_mode_task() {
   }
 }
 
+
+
 void initialize() {
   ez::ez_template_print();
 
@@ -47,7 +49,7 @@ void initialize() {
   //  - change `back` to `front` if the tracking wheel is in front of the midline
   //  - ignore this if you aren't using a horizontal tracker
   chassis.odom_tracker_back_set(&horiz_tracker);
-
+  
   chassis.opcontrol_curve_buttons_toggle(true);
   chassis.opcontrol_drive_activebrake_set(0.0);
   chassis.opcontrol_curve_default_set(0.0, 0.0);
@@ -78,6 +80,7 @@ void initialize() {
 
   pros::Task driveModeTask(drive_mode_task);
   master.set_text(0, 0, drive_arcade ? "Drive: Arcade" : "Drive: Tank");
+  
 }
 
 void disabled() {
