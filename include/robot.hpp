@@ -18,7 +18,6 @@ class Robot {
   void intakeOff();
   void toggleIntake();
   void reverseIntake();
-
   // Lift piston
   void toggleLift();
   void raise();
@@ -31,6 +30,7 @@ class Robot {
   void matchloaderUp();
   void matchloaderDown();
   void toggleMatchloader();
+  void initialize();
 
   // Wing piston (cannot be up when lift is lowered)
   void wingUp();
@@ -39,6 +39,7 @@ class Robot {
 
   // Lever scoring sequence (async)
   void score();
+  void scoreMid();
 
  private:
   // Hardware
@@ -64,10 +65,12 @@ class Robot {
   // Speeds
   const int lever_full_speed = 127;  // max
   const int lever_slow_speed = 63;   // half max
+  
 
   // Positions (degrees)
-  const double lever_score_position = 90.0;
+  const double lever_score_position = 120.0;
   const double lever_home_position = 0.0;
+  
 
   // Timing
   const uint32_t blocker_open_delay_ms = 200;
@@ -82,7 +85,7 @@ class Robot {
   const bool blocker_closed_value = false;
 
   // Lever settling window
-  const double lever_settle_window_deg = 5.0;
+  const double lever_settle_window_deg = 10.0;
 
   // Active speed cap chosen at the moment score() is requested
   int active_lever_speed = 127;
