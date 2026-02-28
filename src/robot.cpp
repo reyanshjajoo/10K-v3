@@ -31,6 +31,15 @@ Robot::Robot(int firstStagePort,
   matchloader_up = false;
   wing_up = false;
 }
+//utility 
+static inline double rot_deg(const pros::Rotation& r) {
+  // Rotation sensor is centidegrees (0.01 deg)
+  return r.get_position() / 100.0;
+}
+
+static inline int clamp127(int v) {
+  return (v > 127) ? 127 : (v < -127) ? -127 : v;
+}
 
 void Robot::enforceWingRule() {
   // Wing is uncontrollable when lift is lowered: force down
@@ -40,8 +49,11 @@ void Robot::enforceWingRule() {
   }
 }
 
+
+
+
+
 void Robot::init() {
-  // Default piston states (defaults up)
   lift.set_value(piston_up_value);
   lift_up = true;
 
@@ -53,19 +65,14 @@ void Robot::init() {
   wing.set_value(piston_down_value);
   wing_up = false;
 
-  // Make sure wing rule is enforced when lift is lowered
   enforceWingRule();
 
-  lever.tare_position();
-
-  // Safety: stop motors at init
-  first_stage.move(0);
-  lever.move(0);
-  intake_running = false;
-
-  lever_rotation.reset_position();
   lever.set_brake_mode(MOTOR_BRAKE_HOLD);
-  lever.set_encoder_units(pros::E_MOTOR_ENCODER_DEGREES);
+  lever.move(0);
+
+  first_stage.move(0);
+  intake_running = false;
+  
 }
 
 // -------- First stage --------
@@ -132,7 +139,6 @@ void Robot::toggleMatchloader() {
 }
 
 // -------- Wing piston (restricted by lift) --------
-
 void Robot::wingUp() {
   // If lift is lowered, wing cannot go up
   enforceWingRule();
@@ -165,7 +171,7 @@ void Robot::score() {
   if (score_state != ScoreState::IDLE) return;
 
   // Choose speed cap based on current lift position
-  active_lever_speed = lift_up ? lever_full_speed : lever_slow_speed;
+  active_lever_speed = lift_up ? lever_full_speed : lever_full_speed; //until pneumatics 
 
   score_requested = true;
 }
@@ -186,43 +192,51 @@ void Robot::score_task() {
 
     switch (score_state) {
       case ScoreState::IDLE:
+        //lever.move(0);
         break;
 
       case ScoreState::OPEN_BLOCKER_DELAY:
         if (pros::millis() - state_start_ms >= blocker_open_delay_ms) {
-          lever.move_absolute(
-              lever_score_position,
-              active_lever_speed);
-
+          // start moving toward score using rotation sensor
           score_state = ScoreState::MOVE_TO_SCORE;
         }
         break;
 
-      case ScoreState::MOVE_TO_SCORE:
-        if (std::abs(lever.get_position() - lever_score_position) < lever_settle_window_deg) {
+      case ScoreState::MOVE_TO_SCORE: {
+        double pos = rot_deg(lever_rotation);
+        double err = lever_score_position - pos;
+        int dir = (err >= 0) ? 1 : -1;
+        lever.move(clamp127(dir * active_lever_speed));
+
+        if (std::abs(err) < lever_settle_window_deg) {
+          lever.move(0);
           state_start_ms = pros::millis();
           score_state = ScoreState::HOLD_SCORE;
         }
         break;
+      }
 
       case ScoreState::HOLD_SCORE:
+        lever.move(0);
         if (pros::millis() - state_start_ms >= lever_hold_ms) {
-          lever.move_absolute(
-              lever_home_position,
-              active_lever_speed);
-
           score_state = ScoreState::MOVE_TO_HOME;
         }
         break;
 
-      case ScoreState::MOVE_TO_HOME:
-        if (std::abs(lever.get_position() - lever_home_position) < lever_settle_window_deg) {
+      case ScoreState::MOVE_TO_HOME: {
+        double pos = rot_deg(lever_rotation);
+        double err = lever_home_position - pos;
+
+        int dir = (err >= 0) ? 1 : -1;
+        lever.move(clamp127(dir * active_lever_speed));
+
+        if (std::abs(err) < lever_settle_window_deg) {
+          lever.move(0);
           blocker.set_value(blocker_closed_value);
           score_state = ScoreState::IDLE;
         }
         break;
+      }
     }
-
-    pros::delay(ez::util::DELAY_TIME);
   }
 }
