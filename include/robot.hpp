@@ -1,6 +1,8 @@
 // ===================== robot.hpp =====================
 #pragma once
 #include "main.h"
+#include <algorithm>
+#include <cmath>
 
 class Robot {
  public:
@@ -13,6 +15,7 @@ class Robot {
         char wingPort);
 
   void init();
+
   // First stage (roller)
   void intakeOn();
   void intakeOff();
@@ -24,9 +27,6 @@ class Robot {
   void raise();
   void lower();
 
-  // Blocker piston (stopper)
-  // Note: blocker is handled automatically during scoring, but you can still expose controls later if you want.
-
   // Matchloader piston
   void matchloaderUp();
   void matchloaderDown();
@@ -37,8 +37,8 @@ class Robot {
   void wingDown();
   void toggleWing();
 
-  // Lever scoring sequence (async)
-  void score();
+  // Lever move (NO PID)
+  void moveLeverTo(double target_deg, int dir, int power = 80);
 
  private:
   // Hardware
@@ -54,58 +54,37 @@ class Robot {
 
   // State
   bool intake_running = false;
-
   bool lift_up = true;
+  bool matchloader_up = false;
+  bool wing_up = false;
 
-  bool matchloader_up = false;  // defaults DOWN
-  bool wing_up = false;         // defaults DOWN (and forced DOWN when lift is lowered)
-
-  // ===== Lever constants (easy tuning) =====
-  // Speeds
-  const int lever_full_speed = 127;  // max
-  const int lever_slow_speed = 63;   // half max
-
-  // Positions (degrees)
-  const double lever_score_position = 90.0;
-  const double lever_home_position = 0.0;
-
-  // Timing
-  const uint32_t blocker_open_delay_ms = 200;
-  const uint32_t lever_hold_ms = 750;
-
-  // Piston values (assumption: true=up/open, false=down/closed)
   const bool piston_up_value = true;
   const bool piston_down_value = false;
 
-  // Blocker values
   const bool blocker_open_value = true;
   const bool blocker_closed_value = false;
 
-  // Lever settling window
-  const double lever_settle_window_deg = 5.0;
-
-  // Active speed cap chosen at the moment score() is requested
-  int active_lever_speed = 127;
-
-  // Score task state machine
-  enum class ScoreState {
+  // ===== Lever move state machine =====
+  enum class LeverState {
     IDLE,
-    OPEN_BLOCKER_DELAY,
-    MOVE_TO_SCORE,
-    HOLD_SCORE,
-    MOVE_TO_HOME
+    MOVE_TO_TARGET
   };
 
-  volatile ScoreState score_state = ScoreState::IDLE;
-  volatile bool score_requested = false;
+  volatile LeverState lever_state = LeverState::IDLE;
+  volatile bool lever_requested = false;
 
-  uint32_t state_start_ms = 0;  // used for blocker delay + hold timer
+  double lever_target_deg = 0.0;
+  int lever_dir = 1;
+  int lever_power = 80;
+  double lever_window = 10.0;
 
-  // Task
-  static void score_task_trampoline(void* param);
-  void score_task();
-  pros::Task scoreTask;
+  static void lever_task_trampoline(void* param);
+  void lever_task();
+  pros::Task leverTask;
 
-  // Helpers
-  void enforceWingRule();  // force wing down if lift is lowered
+  void enforceWingRule();
+
+  inline double lever_deg() {
+    return lever_rotation.get_position() / 100.0; // centideg -> deg
+  }
 };
