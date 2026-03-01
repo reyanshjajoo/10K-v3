@@ -1,4 +1,5 @@
 #include "robot.hpp"
+#include "okapi/api.hpp"
 
 #include <cmath>
 
@@ -24,7 +25,7 @@ Robot::Robot(int firstStagePort,
 
   // Blocker (stopper): closed by default
   blocker.set_value(blocker_closed_value);
-
+  
   // New pistons: both default DOWN
   matchloader.set_value(piston_down_value);
   wing.set_value(piston_down_value);
@@ -37,16 +38,19 @@ static inline double rot_deg(const pros::Rotation& r) {
   return r.get_position() / 100.0;
 }
 
-static inline int clamp127(int v) {
-  return (v > 127) ? 127 : (v < -127) ? -127 : v;
-}
 
+double Robot::getLeverRotation() {
+  return rot_deg(lever_rotation);
+}
 void Robot::enforceWingRule() {
   // Wing is uncontrollable when lift is lowered: force down
   if (!lift_up) {
     wing.set_value(piston_down_value);
     wing_up = false;
   }
+}
+double Robot::decidePoseLever() {
+  return lift_up ? lever_score_pose_high : lever_score_pose_mid;
 }
 
 
@@ -67,10 +71,7 @@ void Robot::init() {
 
   enforceWingRule();
 
-  lever.set_brake_mode(MOTOR_BRAKE_HOLD);
-  lever.move(0);
-
-  first_stage.move(0);
+  lever.set_brake_mode(MOTOR_BRAKE_BRAKE);
   intake_running = false;
   
 }
@@ -171,7 +172,7 @@ void Robot::score() {
   if (score_state != ScoreState::IDLE) return;
 
   // Choose speed cap based on current lift position
-  active_lever_speed = lift_up ? lever_full_speed : lever_full_speed; //until pneumatics 
+  active_lever_speed = lift_up ? lever_full_speed : lever_slow_speed; //until pneumatics 
 
   score_requested = true;
 }
@@ -186,7 +187,6 @@ void Robot::score_task() {
       score_requested = false;
 
       blocker.set_value(blocker_open_value);
-      state_start_ms = pros::millis();
       score_state = ScoreState::OPEN_BLOCKER_DELAY;
     }
 
@@ -196,47 +196,58 @@ void Robot::score_task() {
         break;
 
       case ScoreState::OPEN_BLOCKER_DELAY:
-        if (pros::millis() - state_start_ms >= blocker_open_delay_ms) {
+        if (pros::millis() - state_start_ms >= blocker_open_delay_ms) { 
           // start moving toward score using rotation sensor
           score_state = ScoreState::MOVE_TO_SCORE;
+          state_start_ms = pros::millis();
         }
         break;
 
       case ScoreState::MOVE_TO_SCORE: {
+        okapi::Timer timer;
         double pos = rot_deg(lever_rotation);
-        double err = lever_score_position - pos;
-        int dir = (err >= 0) ? 1 : -1;
-        lever.move(clamp127(dir * active_lever_speed));
-
-        if (std::abs(err) < lever_settle_window_deg) {
+        double err = decidePoseLever() - pos;
+        lever.move( active_lever_speed);//just forward direction
+        if (std::abs(err) <= lever_settle_window_deg || pros::millis() - state_start_ms > score_time_ms) { 
           lever.move(0);
           state_start_ms = pros::millis();
           score_state = ScoreState::HOLD_SCORE;
         }
         break;
+        
+
       }
 
       case ScoreState::HOLD_SCORE:
         lever.move(0);
         if (pros::millis() - state_start_ms >= lever_hold_ms) {
           score_state = ScoreState::MOVE_TO_HOME;
+          move_home_start = pros::millis();
         }
         break;
 
       case ScoreState::MOVE_TO_HOME: {
         double pos = rot_deg(lever_rotation);
         double err = lever_home_position - pos;
+        lever.move(-1 * active_lever_speed);
 
-        int dir = (err >= 0) ? 1 : -1;
-        lever.move(clamp127(dir * active_lever_speed));
-
-        if (std::abs(err) < lever_settle_window_deg) {
+        if (std::abs(err) < lever_settle_window_deg || pros::millis() - move_home_start > move_home_time_ms) {  
           lever.move(0);
           blocker.set_value(blocker_closed_value);
           score_state = ScoreState::IDLE;
         }
         break;
       }
+      case ScoreState::MOVE_HOME_START:
+        double pos = rot_deg(lever_rotation);
+        double err = lever_home_position - pos;
+        lever.move(-1 * active_lever_speed);
+        if (std::abs(err) < lever_settle_window_deg || pros::millis() - move_home_start > move_home_time_ms) {  
+          lever.move(0);
+          blocker.set_value(blocker_closed_value);
+          score_state = ScoreState::IDLE;
+        }
+        break;  
     }
   }
 }

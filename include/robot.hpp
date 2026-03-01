@@ -40,7 +40,8 @@ class Robot {
   // Lever scoring sequence (async)
   void score();
   void scoreMid();
-
+  double getLeverRotation();
+  double decidePoseLever();
  private:
   // Hardware
   pros::Motor first_stage;
@@ -63,29 +64,33 @@ class Robot {
 
   // ===== Lever constants (easy tuning) =====
   // Speeds
-  const int lever_full_speed = 127;  // max
-  const int lever_slow_speed = 63;   // half max
+  const int lever_full_speed = 110;  // max
+  const int lever_slow_speed = 40;   // TODO tune this max for now 
   
 
   // Positions (degrees)
-  const double lever_score_position = 120.0;
+  const double lever_score_pose_high = 100.0;
+  const double lever_score_pose_mid = 20.0;//4 bar changes angle to stop
   const double lever_home_position = 0.0;
   
 
   // Timing
-  const uint32_t blocker_open_delay_ms = 200;
-  const uint32_t lever_hold_ms = 750;
+  const uint32_t score_time_ms = 800;
+  const uint32_t move_home_time_ms = 800; // time to reset cuz start time too old 
+  const uint32_t blocker_open_delay_ms = 100; //
+  const uint32_t lever_hold_ms = 300; //time waiting at top 
 
   // Piston values (assumption: true=up/open, false=down/closed)
-  const bool piston_up_value = true;
-  const bool piston_down_value = false;
+  const bool piston_up_value = false;
+  const bool piston_down_value = true;
 
   // Blocker values
   const bool blocker_open_value = true;
   const bool blocker_closed_value = false;
 
   // Lever settling window
-  const double lever_settle_window_deg = 10.0;
+  const double lever_settle_window_deg = 20.0;
+  bool startLoop = true;
 
   // Active speed cap chosen at the moment score() is requested
   int active_lever_speed = 127;
@@ -96,13 +101,15 @@ class Robot {
     OPEN_BLOCKER_DELAY,
     MOVE_TO_SCORE,
     HOLD_SCORE,
-    MOVE_TO_HOME
+    MOVE_TO_HOME, 
+    MOVE_HOME_START
   };
 
   volatile ScoreState score_state = ScoreState::IDLE;
   volatile bool score_requested = false;
 
   uint32_t state_start_ms = 0;  // used for blocker delay + hold timer
+  uint32_t move_home_start = 0; // used for move to home timeout
 
   // Task
   static void score_task_trampoline(void* param);
