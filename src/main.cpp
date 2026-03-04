@@ -30,22 +30,53 @@ bool wing_toggle = false;
 void score(){
   if (!lift_toggle){
     intake.move(127);
-    lever.move_absolute(650, 600);
+    intake_toggle = true;
+    lever.move_absolute(670, 600);
     blocker.set(true);
     pros::delay(800);
-    intake.move(0);
     lever.move_absolute(0, 600);
+    intake_toggle = false;
     pros::delay(400);
   } else {
     intake.move(127);
+    intake_toggle = true;
     lever.move_absolute(750, 100);
     blocker.set(true);
     pros::delay(800);
-    intake.move(0);
     lever.move_absolute(0, 600);
+    intake_toggle = false;
     pros::delay(400);
   }
 }
+
+void score_driver(){
+  if (!lift_toggle){
+    intake.move(127);
+    intake_toggle = true;
+    lever.move_absolute(670, 600);
+    blocker.set(true);
+    pros::delay(800);
+    while (master.get_digital(DIGITAL_R2)) {
+      pros::delay(ez::util::DELAY_TIME);
+    }
+    lever.move_absolute(0, 600);
+    intake_toggle = false;
+    pros::delay(400);
+  } else {
+    intake.move(127);
+    intake_toggle = true;
+    lever.move_absolute(750, 100);
+    blocker.set(true);
+    pros::delay(800);
+    while (master.get_digital(DIGITAL_R2)) {
+      pros::delay(ez::util::DELAY_TIME);
+    }
+    lever.move_absolute(0, 600);
+    intake_toggle = false;
+    pros::delay(400);
+  }
+}
+
 
 void controls() {
   while (true) {
@@ -81,7 +112,7 @@ void controls() {
     }
 
     if (master.get_digital_new_press(DIGITAL_R2)) {
-      pros::Task score_task(score);
+      pros::Task score_task(score_driver);
     }
     pros::delay(ez::util::DELAY_TIME);
   }
