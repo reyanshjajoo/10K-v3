@@ -8,13 +8,12 @@ ez::Drive chassis(
     600);
 
 ez::tracking_wheel horiz_tracker(
-    1,     // Port
+    3,     // Port
     2,     // Wheel Diameter
-    4.0);  // Distance to center of robot
+    -4.45);  // Distance to center of robot
 
 pros::Motor intake(2);
 pros::Motor lever(20);
-pros::Rotation lever_rotation(15);
 
 ez::Piston blocker('D');
 ez::Piston lift('G');
@@ -40,7 +39,7 @@ void score(){
   } else {
     intake.move(127);
     intake_toggle = true;
-    lever.move_absolute(750, 100);
+    lever.move_absolute(800, 100);
     blocker.set(true);
     pros::delay(800);
     lever.move_absolute(0, 600);
@@ -65,7 +64,7 @@ void score_driver(){
   } else {
     intake.move(127);
     intake_toggle = true;
-    lever.move_absolute(750, 100);
+    lever.move_absolute(800, 100);
     blocker.set(true);
     pros::delay(800);
     while (master.get_digital(DIGITAL_R2)) {
@@ -92,10 +91,19 @@ void controls() {
     } else if (l1_new) {
       intake_toggle = !intake_toggle;
       blocker.set(false);
-    } else if (r1) {
-      wing_toggle = true;
-    } else if (!r1) {
+    } else if (lift_toggle){
       wing_toggle = false;
+    } else if (r1) {
+      wing_toggle = false;
+    } else if (!r1) {
+      wing_toggle = true;
+    }
+
+    if (master.get_digital_new_press(DIGITAL_X)){
+      lever.move(-127);
+      pros::delay(800);
+      lever.set_zero_position(0);
+      lever.move(0);
     }
 
     if (master.get_digital_new_press(DIGITAL_UP)) {
@@ -127,8 +135,7 @@ void initialize() {
   //  - ignore this if you aren't using a horizontal tracker
 
   ez::as::auton_selector.autons_add({
-      {"Drive\n\nDrive forward and come back", drive_example},
-      {"Turn\n\nTurn 3 times.", turn_example},
+      {"Six Ball Right", six_ball_right},
   });
 
   chassis.odom_tracker_back_set(&horiz_tracker);
@@ -144,24 +151,23 @@ void initialize() {
   chassis.drive_sensor_reset();
   chassis.odom_xyt_set(0_in, 0_in, 0_deg);
 
-  lever_rotation.reset_position();
 
   master.set_text(0, 0, drive_arcade ? "Drive: Arcade" : "Drive: Tank");
   pros::Task controlTask(controls);
-  // ez::as::initialize();
+  ez::as::initialize();
   pros::lcd::initialize();
 
-  pros::Task screen_task([&]() {
-    while (true) {
-      pros::lcd::print(0, "x: %f", chassis.odom_x_get());
-      pros::lcd::print(1, "y: %f", chassis.odom_y_get());
-      pros::lcd::print(2, "theta: %f", chassis.odom_theta_get());
+  // pros::Task screen_task([&]() {
+  //   while (true) {
+  //     pros::lcd::print(0, "x: %f", chassis.odom_x_get());
+  //     pros::lcd::print(1, "y: %f", chassis.odom_y_get());
+  //     pros::lcd::print(2, "theta: %f", chassis.odom_theta_get());
 
-      pros::lcd::print(4, "lever: %d", lever_rotation.get_position());
-      pros::lcd::print(5, "lever velocity: %d", lever_rotation.get_velocity());
-      pros::delay(20);
-    }
-  });
+  //     pros::lcd::print(4, "rotation: %f", horiz_tracker.get());
+  //     pros::lcd::print(5, "distance to center: %f", horiz_tracker.distance_to_center_get());
+  //     pros::delay(20);
+  //   }
+  // });
 
   lever.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
 }
@@ -178,6 +184,7 @@ void autonomous() {
   chassis.pid_targets_reset();
   chassis.drive_imu_reset();
   chassis.drive_sensor_reset();
+  chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
   chassis.odom_xyt_set(0_in, 0_in, 0_deg);
 
   ez::as::auton_selector.selected_auton_call();
@@ -222,8 +229,8 @@ void ez_template_extras() {
   if (!pros::competition::is_connected()) {
     //  * use A and Y to increment / decrement the constants
     //  * use the arrow keys to navigate the constants
-    if (master.get_digital_new_press(DIGITAL_X))
-      chassis.pid_tuner_toggle();
+    // if (master.get_digital_new_press(DIGITAL_X))
+    //   chassis.pid_tuner_toggle();
 
     // Trigger the selected autonomous routine when B and left are pressed.
 

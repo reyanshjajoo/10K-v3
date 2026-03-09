@@ -5,6 +5,19 @@
 
 extern Drive chassis;
 
+extern pros::Motor intake;
+extern pros::Motor lever;
+extern Piston blocker;
+extern Piston lift;
+extern Piston matchloader;
+extern Piston wing;
+extern bool lift_toggle;
+extern bool wing_toggle;
+
+void score();
+
+
+
 // Your motors, sensors, etc. should go here.  Below are examples
 
 // inline pros::Motor intake(1);
