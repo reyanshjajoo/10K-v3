@@ -25,6 +25,7 @@ bool intake_toggle = false;
 bool reverse_toggle = false;
 bool lift_toggle = false;
 bool wing_toggle = false;
+bool matchloader_toggle = false;
 
 void score(){
   if (!lift_toggle){
@@ -110,6 +111,10 @@ void controls() {
       drive_arcade = !drive_arcade;
       master.set_text(0, 0, drive_arcade ? "Drive: Arcade" : "Drive: Tank");
       master.rumble(drive_arcade ? "." : "..");
+    }
+
+    if (master.get_digital_new_press(DIGITAL_DOWN)) {
+      matchloader_toggle = !matchloader_toggle;
     }
 
     if (master.get_digital(DIGITAL_L2)) {
@@ -270,7 +275,7 @@ void opcontrol() {
       intake.move(0);
     }
 
-    matchloader.button_toggle(DIGITAL_DOWN);
+    matchloader.set(matchloader_toggle);
     lift.set(lift_toggle);
     wing.set(wing_toggle);
     pros::delay(ez::util::DELAY_TIME);
