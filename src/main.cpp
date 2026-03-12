@@ -8,9 +8,9 @@ ez::Drive chassis(
     600);
 
 ez::tracking_wheel horiz_tracker(
-    3,     // Port
+    -3,     // Port
     2,     // Wheel Diameter
-    -4.45);  // Distance to center of robot
+    4.45);  // Distance to center of robot
 
 pros::Motor intake(2);
 pros::Motor lever(20);
@@ -28,53 +28,61 @@ bool wing_toggle = false;
 bool matchloader_toggle = false;
 
 void score(){
+  lever.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
   if (!lift_toggle){
     intake.move(127);
     intake_toggle = true;
-    lever.move_absolute(670, 600);
+    lever.move(127);
     blocker.set(true);
     pros::delay(800);
-    lever.move_absolute(0, 600);
+    lever.move(-127);
     intake_toggle = false;
-    pros::delay(400);
+    pros::delay(1000);
+    lever.move_velocity(0);
   } else {
     intake.move(127);
     intake_toggle = true;
-    lever.move_absolute(800, 100);
+    lever.move_velocity(150);
     blocker.set(true);
-    pros::delay(800);
-    lever.move_absolute(0, 600);
+    pros::delay(1000);
+    lever.move(-127);
     intake_toggle = false;
     pros::delay(400);
+    lever.move_velocity(0);
   }
+  lever.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
 }
 
 void score_driver(){
+  lever.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
   if (!lift_toggle){
     intake.move(127);
     intake_toggle = true;
-    lever.move_absolute(670, 600);
+    lever.move(127);
     blocker.set(true);
     pros::delay(800);
     while (master.get_digital(DIGITAL_R2)) {
       pros::delay(ez::util::DELAY_TIME);
     }
-    lever.move_absolute(0, 600);
+    lever.move(-127);
     intake_toggle = false;
     pros::delay(400);
+    lever.move_velocity(0);
   } else {
     intake.move(127);
     intake_toggle = true;
-    lever.move_absolute(800, 100);
+    lever.move_velocity(150);
     blocker.set(true);
-    pros::delay(800);
+    pros::delay(1000);
     while (master.get_digital(DIGITAL_R2)) {
       pros::delay(ez::util::DELAY_TIME);
     }
-    lever.move_absolute(0, 600);
+    lever.move(-127);
     intake_toggle = false;
-    pros::delay(400);
+    pros::delay(1000);
+    lever.move_velocity(0);
   }
+  lever.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
 }
 
 
@@ -140,7 +148,10 @@ void initialize() {
   //  - ignore this if you aren't using a horizontal tracker
 
   ez::as::auton_selector.autons_add({
-      {"Six Ball Right", six_ball_right},
+    {"SAWP", sawp},
+      {"Nine Ball Right Wing", nine_ball_right_wing},
+      {"Six Ball Right Wing", six_ball_right_wing},
+      {"Six Ball Right Score", six_ball_right_score},
   });
 
   chassis.odom_tracker_back_set(&horiz_tracker);

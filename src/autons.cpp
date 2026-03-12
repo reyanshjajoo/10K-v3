@@ -50,35 +50,51 @@ void default_constants() {
   chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
 }
 
-void six_ball_right(){
-  chassis.odom_xyt_set(48_in, 11_in, 270_deg);
+void score_mid_auto(){
+    intake.move(127);
+    lever.move_velocity(80);
+    blocker.set(true);
+    pros::delay(1000);
+    lever.move(-127);
+    pros::delay(400);
+    lever.move_velocity(0);
+  lever.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
+}
+
+void six_ball_starter(){
+    chassis.odom_xyt_set(48_in, 11_in, 270_deg);
   wing.set(true);
   chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
   chassis.pid_turn_set(295_deg, TURN_SPEED);
   pros::delay(200);
   intake.move(127);
   chassis.pid_drive_set(38_in, DRIVE_SPEED);
-  pros::delay(300);
+  pros::delay(100);
   matchloader.set(true);
-  pros::delay(600);
+  pros::delay(900);
   chassis.pid_turn_set(345_deg, TURN_SPEED);
   pros::delay(500);
   matchloader.set(false);
   chassis.pid_drive_set(15_in, 90);
-  pros::delay(300);
+  pros::delay(200);
   matchloader.set(true);
-  pros::delay(600);
-  chassis.pid_drive_set(-15_in, 90);
-  pros::delay(500);
+  pros::delay(700);
+  chassis.pid_drive_set(-17_in, 90);
+  pros::delay(700);
   chassis.pid_turn_set(225_deg, TURN_SPEED);
-  pros::delay(500);
+  pros::delay(600);
   matchloader.set(false);
-  chassis.pid_drive_set(-22_in, DRIVE_SPEED);
+  chassis.pid_drive_set(-19_in, 127);
   pros::delay(500);
-  chassis.pid_swing_set(LEFT_SWING, 90_deg, SWING_SPEED);
+  chassis.pid_swing_set(LEFT_SWING, 90_deg, SWING_SPEED, -10);
   pros::delay(500);
-  chassis.drive_set(-50, -50);
+  chassis.drive_set(-127, -127);
+  pros::delay(200);
   pros::Task scoreTask(score);
+}
+
+void six_ball_right_wing(){
+  six_ball_starter();
   pros::delay(800);
   wing.set(false);
   wing_toggle = false;
@@ -91,4 +107,82 @@ void six_ball_right(){
   chassis.pid_drive_set(-25_in, DRIVE_SPEED);
   pros::delay(700);
   chassis.pid_turn_set(110_deg, 50);
+}
+
+void six_ball_right_score(){
+  six_ball_starter();
+  pros::delay(3000);
+  pros::Task scoreTask2(score);
+}
+
+
+void sawp(){
+  chassis.odom_xyt_set(48_in, 11_in, 0_deg);
+  wing.set(true);
+  chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
+  intake.move(127);
+  matchloader.set(true);
+  chassis.pid_drive_set(32.5_in, DRIVE_SPEED);
+  pros::delay(900);
+  chassis.pid_turn_set(90_deg, TURN_SPEED);
+  pros::delay(500);
+  chassis.pid_drive_set(15_in, 80);
+  pros::delay(1000);
+  chassis.pid_drive_set(-30_in, DRIVE_SPEED);
+  pros::delay(1500);
+  chassis.drive_set(-127, -127);
+  matchloader.set(false);
+  pros::Task scoreTask(score);
+  pros::delay(800);
+  chassis.pid_turn_set(210_deg, TURN_SPEED);
+  pros::delay(900);
+  chassis.pid_drive_set(15_in, DRIVE_SPEED);
+  matchloader.set(true);
+  pros::delay(500);
+  pros::delay(200);
+  chassis.pid_turn_set(180_deg, TURN_SPEED);
+  pros::delay(500);
+  matchloader.set(false);
+  lift.set(true);
+  lift_toggle = true;
+  chassis.pid_drive_set(46_in, DRIVE_SPEED);
+  pros::delay(400);
+  matchloader.set(true);
+  pros::delay(800);
+  chassis.pid_turn_set(135_deg, TURN_SPEED);
+  pros::delay(500);
+  chassis.pid_drive_set(-20_in, DRIVE_SPEED);
+  pros::delay(700);
+  score_mid_auto();
+  chassis.pid_drive_set(50_in, DRIVE_SPEED);
+  pros::delay(500);
+  lift.set(false);
+  lift_toggle = false;
+  pros::delay(500);
+  chassis.pid_turn_set(90_deg, TURN_SPEED);
+  pros::delay(500);
+  chassis.pid_drive_set(15_in, 80);
+  pros::delay(1000);
+  chassis.pid_drive_set(-30_in, DRIVE_SPEED);
+  pros::delay(1500);
+  chassis.drive_set(-127, -127);
+  matchloader.set(false);
+  pros::Task scoreTask2(score);
+}
+
+void nine_ball_right_wing(){
+  six_ball_starter();
+  matchloader.set(true);
+  pros::delay(1200);
+  chassis.pid_drive_set(33_in, DRIVE_SPEED);
+  pros::delay(1500);
+  chassis.pid_drive_set(-11_in, DRIVE_SPEED);
+  pros::delay(700);
+  chassis.pid_turn_set(225_deg, TURN_SPEED);
+  matchloader.set(false);
+  pros::delay(500);
+  chassis.pid_drive_set(51_in, DRIVE_SPEED);
+  pros::delay(1400);
+  intake.move(-127);
+  pros::delay(1000);
 }
